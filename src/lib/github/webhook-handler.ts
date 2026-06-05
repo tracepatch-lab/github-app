@@ -122,11 +122,13 @@ async function handleIssueLabeled(payload: GithubWebhookPayload) {
       amount: parsed.amount,
       currency: parsed.currency,
       status: "OPEN",
+      ...getIssueDiscoveryFields(payload.issue),
     },
     create: {
       repositoryId: repository.id,
       issueNumber: payload.issue.number,
       issueNodeId: payload.issue.node_id,
+      ...getIssueDiscoveryFields(payload.issue),
       labelName: parsed.raw,
       amount: parsed.amount,
       currency: parsed.currency,
@@ -154,6 +156,28 @@ async function handleIssueLabeled(payload: GithubWebhookPayload) {
   });
 
   return { bountyId: bounty.id };
+}
+
+function getIssueDiscoveryFields(issue: any) {
+  return {
+    issueTitle: issue?.title ?? null,
+    issueUrl: issue?.html_url ?? null,
+    issueState: issue?.state ?? null,
+    issueExcerpt: summarizeIssueBody(issue?.body),
+    issueCreatedAt: issue?.created_at ? new Date(issue.created_at) : null,
+    issueUpdatedAt: issue?.updated_at ? new Date(issue.updated_at) : null,
+  };
+}
+
+function summarizeIssueBody(body: unknown) {
+  if (typeof body !== "string") return null;
+  const summary = body
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return summary ? summary.slice(0, 220) : null;
 }
 
 async function handlePullRequestClosed(payload: GithubWebhookPayload) {
